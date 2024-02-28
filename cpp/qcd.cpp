@@ -1,5 +1,5 @@
-#include <stdexcept>
 #include "i.cpp"
+#include <stdexcept>
 
 #include "Vector.cpp"
 
@@ -9,35 +9,35 @@ typedef struct
     Vector vector;
 } VecInfo;
 
-static const Matrix GammaU0{
-    {1, 0, 0, 0},
-    {0, 1, 0, 0},
-    {0, 0, -1, 0},
-    {0, 0, 0, -1},
+static const Matrix GammaU0 {
+    { 1, 0, 0, 0 },
+    { 0, 1, 0, 0 },
+    { 0, 0, -1, 0 },
+    { 0, 0, 0, -1 },
 };
 
-static const Matrix GammaU1{
-    {0, 0, 0, 1},
-    {0, 0, 1, 0},
-    {0, -1, 0, 0},
-    {-1, 0, 0, 0},
+static const Matrix GammaU1 {
+    { 0, 0, 0, 1 },
+    { 0, 0, 1, 0 },
+    { 0, -1, 0, 0 },
+    { -1, 0, 0, 0 },
 };
 
-static const Matrix GammaU2{
-    {0, 0, 0, i<double>(-1)},
-    {0, 0, i<double>(1), 0},
-    {0, i<double>(1), 0, 0},
-    {i<double>(-1), 0, 0, 0},
+static const Matrix GammaU2 {
+    { 0, 0, 0, i<double>(-1) },
+    { 0, 0, i<double>(1), 0 },
+    { 0, i<double>(1), 0, 0 },
+    { i<double>(-1), 0, 0, 0 },
 };
 
-static const Matrix GammaU3{
-    {0, 0, 1, 0},
-    {0, 0, 0, -1},
-    {-1, 0, 0, 0},
-    {0, 1, 0, 0},
+static const Matrix GammaU3 {
+    { 0, 0, 1, 0 },
+    { 0, 0, 0, -1 },
+    { -1, 0, 0, 0 },
+    { 0, 1, 0, 0 },
 };
 
-static const std::vector<Matrix> Gamma{GammaU0, GammaU1, GammaU2, GammaU3};
+static const std::vector<Matrix> Gamma { GammaU0, GammaU1, GammaU2, GammaU3 };
 
 // [q, gx, k⟩
 auto fish(Vector q, Matrix gx, Vector k) -> Vector
@@ -59,9 +59,9 @@ auto box(Vector q, Vector k) -> double
 
 auto gen_aux_vec(Vector xs) -> Vector
 {
-    if (is_linear_dependent(xs, {1, 1, 0, 0}))
-        return {1, 0, 1, 0};
-    return {1, 1, 0, 0};
+    if (is_linear_dependent(xs, { 1, 1, 0, 0 }))
+        return { 1, 0, 1, 0 };
+    return { 1, 1, 0, 0 };
 }
 
 // Gluon Polarization Vector
@@ -102,7 +102,8 @@ auto mp2(Vector a) -> std::complex<double>
 std::complex<double> square_brackets(
     int i,
     std::vector<VecInfo> vsl,
-    std::vector<VecInfo> vsr)
+    std::vector<VecInfo> vsr
+)
 {
     // clang-format off
     return 2.0 * mp(kappa(vsr), current(i, vsl)) * current(i, vsr)[i]
@@ -114,41 +115,38 @@ std::complex<double> square_brackets(
 std::complex<double> curly_brackets(
     int i, std::vector<VecInfo> vsl,
     std::vector<VecInfo> vsc,
-    std::vector<VecInfo> vsr)
+    std::vector<VecInfo> vsr
+)
 {
+    // clang-format off
     return mp(current(i, vsl), (current(i, vsr) * current(i, vsc)[i] - current(i, vsc) * current(i, vsr)[i])) -
            mp(current(i, vsr), (current(i, vsc) * current(i, vsl)[i] - current(i, vsl) * current(i, vsc)[i]));
+    // clang-format on
 }
 
 auto current(int i, std::vector<VecInfo> vs) -> Vector
 {
     if (vs.size() == 1)
         return gpv(i, vs[0].helicity, vs[0].vector);
-    else if (vs.size() == 2)
-    {
+    else if (vs.size() == 2) {
         Vector result;
         result.reserve(vs[0].vector.size());
 
         for (auto j = 0; j < 4; j++)
-            result[j] = square_brackets(j, {vs[0]}, {vs[1]}) *
-                        (1.0 / mp2(vs[0].vector + vs[1].vector));
+            result[j] = square_brackets(j, { vs[0] }, { vs[1] }) * (1.0 / mp2(vs[0].vector + vs[1].vector));
 
         return result;
-    }
-    else
-    {
+    } else {
         Vector result;
         result.reserve(vs[0].vector.size());
 
-        for (auto j = 0; j < 4; j++)
-        {
+        for (auto j = 0; j < 4; j++) {
 
             auto factor = 1.0 / mp2(kappa(vs));
             auto n = vs.size();
 
             std::complex<double> sb_acc = 0;
-            for (auto m = 0; m < (n - 1); m++)
-            {
+            for (auto m = 0; m < (n - 1); m++) {
                 std::vector<VecInfo> left(vs.begin() + 0, vs.begin() + m);
                 std::vector<VecInfo> right(vs.begin() + m + 1, vs.begin() + n);
                 sb_acc = sb_acc + square_brackets(j, left, right);
@@ -156,8 +154,7 @@ auto current(int i, std::vector<VecInfo> vs) -> Vector
 
             std::complex<double> cb_acc = 0;
             for (auto m = 0; m < (n - 2); m++)
-                for (auto k = m + 1; k < (n - 1); k++)
-                {
+                for (auto k = m + 1; k < (n - 1); k++) {
                     std::vector<VecInfo> left(vs.begin() + 0, vs.begin() + m);
                     std::vector<VecInfo> center(vs.begin() + m + 1, vs.begin() + k);
                     std::vector<VecInfo> right(vs.begin() + k + 1, vs.begin() + n);
