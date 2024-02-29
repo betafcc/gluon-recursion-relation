@@ -96,6 +96,19 @@ std::vector<T> operator+(const std::vector<T>& a, const std::vector<T>& b)
     return acc;
 }
 
+// Overload to perform mathematical vector subtraction
+template <typename T>
+std::vector<T> operator-(const std::vector<T>& a, const std::vector<T>& b)
+{
+    std::vector<T> acc;
+    acc.reserve(a.size());
+
+    for (size_t i = 0; i < a.size(); ++i)
+        acc.push_back(a[i] - b[i]);
+
+    return acc;
+}
+
 // Overload to perform mathematical scalar multiplication to a vector
 Vector operator*(const Number& a, const Vector& b)
 {
@@ -209,10 +222,34 @@ public:
     Process(std::vector<Gluon> gs) :
         gluons(gs) { }
 
-    auto current(std::vector<std::size_t> gis)
+    Vector current(std::vector<std::size_t> gis)
     {
-        if (gis.size() == 1)
-            return polarization(gis[0]);
+        Vector result;
+        result.reserve(4);
+
+        for (auto i = 0; i < 4; ++i)
+            result.push_back(current_component(gis, i));
+
+        return result;
+    }
+
+    // variadic version of current. eg current(1, 2, 3)
+    Vector current(std::size_t gi, ...)
+    {
+        std::vector<std::size_t> gis;
+        gis.push_back(gi);
+
+        va_list args;
+        va_start(args, gi);
+        while (true) {
+            auto next = va_arg(args, std::size_t);
+            if (next == 0)
+                break;
+            gis.push_back(next);
+        }
+        va_end(args);
+
+        return current(gis);
     }
 
     // κ (2.10) from berends
@@ -229,16 +266,17 @@ public:
         return acc;
     }
 
-    // J_ξ(1) -> current_component(ξ, 0)
-    // Number current_component(std::size_t component, std::size_t i)
-    // {
-    // }
+    // this version takes a vector of indexes,
+    // since it's not clear how kappa should behave when indexes out of order
+    Vector kappa(std::vector<std::size_t> gis) const
+    {
+        Vector acc = gluons[gis[0]].momentum;
 
-    // J(1) -> current(0)
-    // Vector current(std::size_t i)
-    // {
-    //     return gpv(i, gluons[i].helicity, gluons[i].vector);
-    // }
+        for (auto i = 1; i < gis.size(); ++i)
+            acc = acc + gluons[gis[i]].momentum;
+
+        return acc;
+    }
 
     friend std::ostream& operator<<(std::ostream& os, const Process& p)
     {
@@ -265,9 +303,54 @@ private:
     {
         if (gis.size() == 1)
             return polarization_component(gis[0], component);
-        // else if (gis.size() == 2) {
-        //     return square_brackets({ 0 }, { 1 }, component) / mp2(gluons[0].momentum + gluons[1].momentum);
-        // }
+        else if (gis.size() == 2)
+            return square_brackets({ 0 }, { 1 }, component) / mp2(gluons[0].momentum + gluons[1].momentum);
+        else {
+            auto factor = 1.0 / mp2(kappa(gis));
+            auto n = gis.size();
+
+            Number sb_acc = 0;
+            for (auto m = 0; m < (n - 1); m++) {
+                std::vector<std::size_t> left(gis.begin() + 0, gis.begin() + m);
+                std::vector<std::size_t> right(gis.begin() + m + 1, gis.begin() + n);
+                sb_acc = sb_acc + square_brackets(left, right, component);
+            }
+
+            Number cb_acc = 0;
+            for (auto m = 0; m < (n - 2); m++)
+                for (auto k = m + 1; k < (n - 1); k++) {
+                    std::vector<std::size_t> left(gis.begin() + 0, gis.begin() + m);
+                    std::vector<std::size_t> center(gis.begin() + m + 1, gis.begin() + k);
+                    std::vector<std::size_t> right(gis.begin() + k + 1, gis.begin() + n);
+                    cb_acc = cb_acc + curly_brackets(left, center, right, component);
+                }
+
+            return factor * (sb_acc + cb_acc);
+        }
+    }
+
+    Number square_brackets(
+        std::vector<std::size_t> lgs,
+        std::vector<std::size_t> rgs,
+        std::size_t component
+    )
+    {
+        return 2.0 * mp(kappa(lgs), current(rgs)) * current_component(lgs, component)
+            - 2.0 * mp(kappa(rgs), current(lgs)) * current_component(rgs, component)
+            + (kappa(rgs) - kappa(lgs))[component] * mp(current(rgs), current(lgs));
+    }
+
+    Number curly_brackets(
+        std::vector<std::size_t> lgs,
+        std::vector<std::size_t> cgs,
+        std::vector<std::size_t> rgs,
+        int component
+    )
+    {
+        // clang-format off
+    return mp(current(lgs), (current(rgs) * current_component(cgs, component) - current(cgs) * current_component(rgs, component))) -
+           mp(current(rgs), (current(cgs) * current_component(lgs, component) - current(lgs) * current_component(cgs, component)));
+        // clang-format on
     }
 
     // FIXME: this should be a public Gluon method
@@ -300,7 +383,7 @@ private:
     // Grab momentum of another gluon on the process
     // FIXME: this should not exist, it's only being used to satisfy "arbitrary massless reference momentum"
     //   - based on Srednicki Quantum Field Theory page 357
-    //   it could be any non parallel vector, and a simpler one
+    //   it could be any non-parallel vector, and a simpler one
     //   eg `is_linear_dependent(vector, {1, 1, 0, 0}) ? {1, 1, 0, 0} : {1, 0, 0, 1}`
     Vector auxiliar(std::size_t gi)
     {
