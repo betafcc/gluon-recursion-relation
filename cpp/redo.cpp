@@ -2,9 +2,9 @@
 #include <iostream>
 #include <vector>
 
-typedef std::complex<double> Number;
-typedef std::vector<Number> Vector;
-typedef std::vector<Vector> Matrix;
+using Number = std::complex<double>;
+using Vector = std::vector<Number>;
+using Matrix = std::vector<Vector>;
 
 enum class Helicity {
     Plus,
@@ -73,6 +73,17 @@ std::ostream& operator<<(std::ostream& os, const std::complex<T>& c)
     return os;
 }
 
+// Overload to pretty print vectors
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const std::vector<T>& vec)
+{
+    os << "⟨ ";
+    for (size_t i = 0; i < vec.size(); ++i)
+        os << vec[i] << " ";
+    os << "⟩";
+    return os;
+}
+
 // Overload to perform mathematical vector addition
 template <typename T>
 std::vector<T> operator+(const std::vector<T>& a, const std::vector<T>& b)
@@ -109,6 +120,39 @@ Vector operator*(const Vector& b, const Number& a)
     return acc;
 }
 
+// Inner Product
+Number dot(Vector a, Vector b)
+{
+    Number acc = 0;
+
+    for (size_t i = 0; i < a.size(); ++i)
+        acc = acc + a[i] * b[i];
+
+    return acc;
+}
+
+Vector dot(Matrix a, Vector b)
+{
+    Vector acc;
+    acc.reserve(b.size());
+
+    for (size_t i = 0; i < a.size(); ++i)
+        acc.push_back(dot(a[i], b));
+
+    return acc;
+}
+
+Vector dot(Vector a, Matrix b)
+{
+    Vector acc;
+    acc.reserve(a.size());
+
+    for (size_t i = 0; i < b.size(); ++i)
+        acc.push_back(dot(a, b[i]));
+
+    return acc;
+}
+
 // Minkowski Inner Product
 Number mp(Vector a, Vector b)
 {
@@ -121,10 +165,10 @@ Number mp2(Vector a)
     return mp(a, a);
 }
 
-// [q, gx, k⟩
-auto fish(Vector q, Matrix gx, Vector k) -> Number
+// [q | g | k⟩
+Number fish(Vector q, Matrix g, Vector k)
 {
-    throw std::invalid_argument("Not Implemented");
+    return dot(q, dot(g, k));
 }
 
 // ⟨q | k⟩
@@ -195,19 +239,19 @@ public:
         auto indent = "    ";
 
         os << "Process: \n";
-        os << indent << "gluon helicity  momentum" << '\n';
+        //  g  λ
+
+        // os << indent << "g\tλ  p\u20D7" << '\n';
+        os << indent << "g\tλ  p" << '\n';
         for (auto i = 0; i < p.gluons.size(); ++i) {
-            os << indent << i << "     ";
+            os << indent << i << "\t";
+
             if (p.gluons[i].helicity == Helicity::Plus)
                 os << "+";
             else
                 os << "-";
 
-            os << "         ⟨ ";
-            for (const auto& component : p.gluons[i].momentum) {
-                os << component << " ";
-            }
-            os << "⟩\n";
+            os << "  " << p.gluons[i].momentum << '\n';
         }
         return os;
     }
@@ -220,6 +264,8 @@ int main()
         { Minus, { 5, 6, 7, 8 } },
     };
 
+    // Vector gk(4, Number(0, 1));
+    // std::cout << gk;
     std::cout << process;
 
     // std::cout << Number(0, 1) / Number(1, 2);

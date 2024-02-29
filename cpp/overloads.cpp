@@ -23,7 +23,7 @@ function<C(A)> operator>>(function<C(B)> g, function<B(A)> f)
     { return g(f(a)); };
 }
 
-// Overload << operator to print std::vector<int>
+// Overload << operator to print std::vector
 template <typename T>
 std::ostream &operator<<(std::ostream &os, const std::vector<T> &vec)
 {
