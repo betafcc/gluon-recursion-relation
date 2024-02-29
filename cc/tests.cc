@@ -72,13 +72,12 @@ public:
     }
 };
 
-auto test(const char* message, bool condition) -> void
+void test(const char* message, bool condition)
 {
     if (condition)
         std::cout << message << " ✅\n";
-    else {
+    else
         std::cerr << message << " ❌\n";
-    }
 }
 
 int main()
@@ -93,9 +92,17 @@ int main()
     Process process(gluons);
 
     std::cout << process << '\n';
-    std::cout << process.current(0, 1);
+    std::cout << process.current({ 0, 1, 2 });
     std::cout << '\n';
-    std::cout << process.current(1, 0);
+    std::cout << process.current({ 1, 0 });
+
+    // TODO:
+    // berends (2.5)
+    // (K₁ + K₂) · J(1, 2) = 0
+
+    // TODO:
+    // berends (2.6)
+    // J_ξ(1, 2) = -J_ξ(2, 1)
 
     // test(
     //     "berends (2.15) -> J(3, 2, 1) = J(1, 2, 3) ",

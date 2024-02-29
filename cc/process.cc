@@ -180,48 +180,54 @@ Vector dot(Vector a, Matrix b)
 }
 
 // Minkowski Inner Product
-Number mp(Vector a, Vector b)
+inline Number mp(Vector a, Vector b)
 {
     return a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3];
 }
 
 // Same as mp(a, a)
-Number mp2(Vector a)
+inline Number mp2(Vector a)
 {
     return mp(a, a);
 }
 
 // ⟨q | k⟩ - Srednicki Quantum Field Theory page 356
-Number braket(Vector q, Vector k)
+inline Number braket(Vector q, Vector k)
 {
     return dot(conjugate(q), k);
 }
 
 // [q | k] - Srednicki Quantum Field Theory page 356
-Number box(Vector q, Vector k)
+inline Number box(Vector q, Vector k)
 {
     return dot(q, conjugate(k));
 }
 
 // [q | g | k⟩ - Srednicki Quantum Field Theory page 357
-Number fish(Vector q, Matrix g, Vector k)
+inline Number fish(Vector q, Matrix g, Vector k)
 {
     return dot(q, dot(g, k));
 }
 
 // ⟨q | g | k] - Srednicki Quantum Field Theory page 357
-Number backfish(Vector q, Matrix g, Vector k)
+inline Number backfish(Vector q, Matrix g, Vector k)
 {
     return dot(conjugate(q), dot(g, k));
 }
 
-// berends (2.13)
-// {J(1), J(2), J(3)}_ξ
-//    = J(1) . (J(3) J_ξ(2) - J(2) J_ξ(3))
-//    - J(3) . (J(2) J_ξ(1) - J(1) J_ξ(2))
-// {a, b, c}_ξ
-//    = a . (c * b[xi] - b * c[xi])
-//    - c . (b * a[xi] - a * b[xi])
+/*
+berends (2.13)
+
+{J(1), J(2), J(3)}_ξ
+  = J(1) . (J(3) J_ξ(2) - J(2) J_ξ(3))
+  - J(3) . (J(2) J_ξ(1) - J(1) J_ξ(2))
+
+=>
+
+{a, b, c}[xi]
+  = a . (c * b[xi] - b * c[xi])
+  - c . (b * a[xi] - a * b[xi])
+*/
 inline Number curly_brackets(
     Vector a,
     Vector b,
@@ -257,34 +263,45 @@ public:
     Process(std::vector<Gluon> gs) :
         gluons(gs) { }
 
-    Vector current(std::vector<std::size_t> gis)
+    Number current(std::vector<std::size_t> gis, std::size_t xi)
     {
-        Vector result;
-        result.reserve(4);
+        if (gis.size() == 1)
+            return polarization(gis[0], xi);
+        else if (gis.size() == 2)
+            // berends (2.7)
+            return (1.0 / mp2(gluons[0].momentum + gluons[1].momentum)) * square_brackets({ 0 }, { 1 }, xi);
+        else {
+            auto factor = 1.0 / mp2(kappa(gis));
+            auto n = gis.size();
 
-        for (auto i = 0; i < 4; ++i)
-            result.push_back(current_component(gis, i));
+            Number sb_acc = 0;
+            for (auto m = 0; m < (n - 1); m++) {
+                std::vector<std::size_t> left(gis.begin() + 0, gis.begin() + m);
+                std::vector<std::size_t> right(gis.begin() + m + 1, gis.begin() + n);
+                sb_acc = sb_acc + square_brackets(left, right, xi);
+            }
 
-        return result;
+            Number cb_acc = 0;
+            for (auto m = 0; m < (n - 2); m++)
+                for (auto k = m + 1; k < (n - 1); k++) {
+                    std::vector<std::size_t> left(gis.begin() + 0, gis.begin() + m);
+                    std::vector<std::size_t> center(gis.begin() + m + 1, gis.begin() + k);
+                    std::vector<std::size_t> right(gis.begin() + k + 1, gis.begin() + n);
+                    cb_acc = cb_acc + curly_brackets(current(left), current(center), current(right), xi);
+                }
+
+            return factor * (sb_acc + cb_acc);
+        }
     }
 
-    // variadic version of current, eg. `current(0, 1, 2)`
-    Vector current(std::size_t gi, ...)
+    inline Vector current(std::vector<std::size_t> gis)
     {
-        std::vector<std::size_t> gis;
-        gis.push_back(gi);
-
-        va_list args;
-        va_start(args, gi);
-        while (true) {
-            auto next = va_arg(args, std::size_t);
-            if (next == 0)
-                break;
-            gis.push_back(next);
-        }
-        va_end(args);
-
-        return current(gis);
+        return {
+            current(gis, 0),
+            current(gis, 1),
+            current(gis, 2),
+            current(gis, 3),
+        };
     }
 
     // κ (2.10) from berends
@@ -337,76 +354,56 @@ public:
     }
 
 private:
-    Number current_component(std::vector<std::size_t> gis, std::size_t component)
-    {
-        if (gis.size() == 1)
-            return polarization_component(gis[0], component);
-        else if (gis.size() == 2)
-            return square_brackets({ 0 }, { 1 }, component) / mp2(gluons[0].momentum + gluons[1].momentum);
-        else {
-            auto factor = 1.0 / mp2(kappa(gis));
-            auto n = gis.size();
+    /*
+    berends (2.7) = (2.4)
+    [J(1), J(2)]_ξ
+        = 2 K₂ . J(1) J_ξ(2)
+        - 2 K₁ . J(2) J_ξ(1)
+        + (K₁ - K₂)_ξ J(1) . J(2)
 
-            Number sb_acc = 0;
-            for (auto m = 0; m < (n - 1); m++) {
-                std::vector<std::size_t> left(gis.begin() + 0, gis.begin() + m);
-                std::vector<std::size_t> right(gis.begin() + m + 1, gis.begin() + n);
-                sb_acc = sb_acc + square_brackets(left, right, component);
-            }
+    =>
 
-            Number cb_acc = 0;
-            for (auto m = 0; m < (n - 2); m++)
-                for (auto k = m + 1; k < (n - 1); k++) {
-                    std::vector<std::size_t> left(gis.begin() + 0, gis.begin() + m);
-                    std::vector<std::size_t> center(gis.begin() + m + 1, gis.begin() + k);
-                    std::vector<std::size_t> right(gis.begin() + k + 1, gis.begin() + n);
-                    cb_acc = cb_acc + curly_brackets(left, center, right, component);
-                }
+    [J(1 ... m), J(m + 1 ... n)]_ξ
+        = 2 κ(m + 1, n) . J(1 ... m) J_ξ(m + 1 ... n)
+        - 2 κ(1, m)     . J(m + 1 ... n) J_ξ(1 ... m)
+        + (κ(1, m) - κ(m + 1, n))_ξ J(1 ... m) . J(m + 1 ... n)
 
-            return factor * (sb_acc + cb_acc);
-        }
-    }
+    =>
 
+    [J(xs), J(ys)][xi]
+        = 2 κ(ys) . J(xs) J(ys)[xi]
+        - 2 κ(xs) . J(ys) J(xs)[xi]
+        + (κ(xs) - κ(ys))[xi] J(xs) . J(ys)
+    */
     Number square_brackets(
-        std::vector<std::size_t> lgs,
-        std::vector<std::size_t> rgs,
-        std::size_t component
+        std::vector<std::size_t> xs,
+        std::vector<std::size_t> ys,
+        std::size_t xi
     )
     {
-        return 2.0 * mp(kappa(lgs), current(rgs)) * current_component(lgs, component)
-            - 2.0 * mp(kappa(rgs), current(lgs)) * current_component(rgs, component)
-            + (kappa(rgs) - kappa(lgs))[component] * mp(current(rgs), current(lgs));
+        return dot(2 * kappa(ys), current(xs) * current(ys, xi))
+            - dot(2 * kappa(xs), current(ys) * current(xs, xi))
+            + (kappa(xs) - kappa(ys))[xi] * dot(current(xs), current(ys));
     }
 
-    Number curly_brackets(
-        std::vector<std::size_t> lgs,
-        std::vector<std::size_t> cgs,
-        std::vector<std::size_t> rgs,
-        std::size_t component
+    inline Vector square_brackets(
+        std::vector<std::size_t> xs,
+        std::vector<std::size_t> ys
     )
     {
-        // clang-format off
-    return mp(current(lgs), (current(rgs) * current_component(cgs, component) - current(cgs) * current_component(rgs, component))) -
-           mp(current(rgs), (current(cgs) * current_component(lgs, component) - current(lgs) * current_component(cgs, component)));
-        // clang-format on
+        return {
+            square_brackets(xs, ys, 0),
+            square_brackets(xs, ys, 1),
+            square_brackets(xs, ys, 2),
+            square_brackets(xs, ys, 3),
+        };
     }
 
     // FIXME: this should be a public Gluon method
-    Vector polarization(std::size_t gi)
-    {
-        Vector acc;
-        acc.reserve(4);
-
-        for (auto j = 0; j < 4; ++j)
-            acc.push_back(polarization_component(gi, j));
-
-        return acc;
-    }
-
     // (60.7) and (60.8) - Srednicki Quantum Field Theory page 357
-    Number polarization_component(std::size_t gi, std::size_t component)
+    Number polarization(std::size_t gi, std::size_t xi)
     {
-        auto gm = Gamma[component];
+        auto gm = Gamma[xi];
         auto q = auxiliar(gi); // this prevents polarization from being method of Gluon
         auto k = gluons[gi].momentum;
 
@@ -416,6 +413,16 @@ private:
         case Helicity::Minus: // (60.8)
             return (-1 / sqrt(2)) * (fish(q, gm, k) / box(q, k));
         }
+    }
+
+    inline Vector polarization(std::size_t gi)
+    {
+        return {
+            polarization(gi, 0),
+            polarization(gi, 1),
+            polarization(gi, 2),
+            polarization(gi, 3),
+        };
     }
 
     // Grab momentum of another gluon on the process
