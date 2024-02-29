@@ -77,9 +77,12 @@ template <typename T>
 std::ostream& operator<<(std::ostream& os, const std::vector<T>& vec)
 {
     os << "⟨ ";
-    for (size_t i = 0; i < vec.size(); ++i)
-        os << vec[i] << " ";
-    os << "⟩";
+    for (size_t i = 0; i < vec.size(); ++i) {
+        os << vec[i];
+        if (i != vec.size() - 1)
+            os << ", ";
+    }
+    os << " ⟩";
     return os;
 }
 
@@ -268,6 +271,8 @@ public:
 
     // this version takes a vector of indexes,
     // since it's not clear how kappa should behave when indexes out of order
+    // or not continuous
+    // eg K({1, 4, 3}) != K(1, 3)
     Vector kappa(std::vector<std::size_t> gis) const
     {
         Vector acc = gluons[gis[0]].momentum;
@@ -344,7 +349,7 @@ private:
         std::vector<std::size_t> lgs,
         std::vector<std::size_t> cgs,
         std::vector<std::size_t> rgs,
-        int component
+        std::size_t component
     )
     {
         // clang-format off
