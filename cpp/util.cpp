@@ -1,6 +1,9 @@
-#include <vector>
+#ifndef UTIL_CPP
+#define UTIL_CPP
+
 #include <functional>
 #include <stdexcept>
+#include <vector>
 
 using std::function;
 using std::invalid_argument;
@@ -19,28 +22,27 @@ auto range(int start, int end, int step = 1) -> vector<int>
 }
 
 template <typename A, typename B>
-auto map(function<B(A)> f, const vector<A> &vec) -> vector<B>
+auto map(function<B(A)> f, const vector<A>& vec) -> vector<B>
 {
     vector<B> result;
     result.reserve(vec.size());
 
-    for (const A &item : vec)
+    for (const A& item : vec)
         result.push_back(f(item));
 
     return result;
 }
 
 template <typename A, typename B>
-auto map(function<B(A)> f) -> function<vector<B>(const vector<A> &)>
+auto map(function<B(A)> f) -> function<vector<B>(const vector<A>&)>
 {
-    return [f](const vector<A> &vec) -> vector<B>
-    {
+    return [f](const vector<A>& vec) -> vector<B> {
         return map(f, vec);
     };
 }
 
 template <typename A, typename B, typename C>
-auto zip_with(function<C(A, B)> f, const vector<A> &va, const vector<B> &vb) -> vector<C>
+auto zip_with(function<C(A, B)> f, const vector<A>& va, const vector<B>& vb) -> vector<C>
 {
     vector<C> result;
     size_t minSize = min(va.size(), vb.size());
@@ -53,38 +55,36 @@ auto zip_with(function<C(A, B)> f, const vector<A> &va, const vector<B> &vb) -> 
 }
 
 template <typename A, typename B, typename C>
-auto zip_with(function<C(A, B)> f, const vector<A> &va) -> function<vector<C>(const vector<B> &)>
+auto zip_with(function<C(A, B)> f, const vector<A>& va) -> function<vector<C>(const vector<B>&)>
 {
-    return [&f, &va](const vector<B> &vb) -> vector<C>
-    {
+    return [&f, &va](const vector<B>& vb) -> vector<C> {
         return zip_with(f, va, vb);
     };
 }
 
 template <typename A, typename B, typename C>
-auto zip_with(function<C(A, B)> f) -> function<function<vector<C>(const vector<B> &)>(const vector<A> &)>
+auto zip_with(function<C(A, B)> f) -> function<function<vector<C>(const vector<B>&)>(const vector<A>&)>
 {
-    return [&f](const vector<A> &va) -> function<vector<C>(const vector<B> &)>
-    {
+    return [&f](const vector<A>& va) -> function<vector<C>(const vector<B>&)> {
         return zip_with<A, B, C>(f, va);
     };
 }
 
 template <typename A, typename B>
-auto reduce(function<A(A, B)> f, const vector<B> &vec, A initial) -> A
+auto reduce(function<A(A, B)> f, const vector<B>& vec, A initial) -> A
 {
     A acc = initial;
-    for (const B &item : vec)
+    for (const B& item : vec)
         acc = f(acc, item);
 
     return acc;
 }
 
 template <typename A, typename B>
-auto reduce(function<A(A, B)> f, const vector<B> &vec) -> A
+auto reduce(function<A(A, B)> f, const vector<B>& vec) -> A
 {
     if (vec.empty())
-        return A{};
+        return A {};
     // throw invalid_argument("Vector empty");
 
     A acc = vec.front();
@@ -95,19 +95,19 @@ auto reduce(function<A(A, B)> f, const vector<B> &vec) -> A
 }
 
 template <typename A, typename B>
-class ReduceFunctor
-{
+class ReduceFunctor {
 public:
     function<A(A, B)> f;
 
-    ReduceFunctor(function<A(A, B)> f) : f(std::move(f)) {}
+    ReduceFunctor(function<A(A, B)> f) :
+        f(std::move(f)) { }
 
-    A operator()(const vector<B> &vec, A initial) const
+    A operator()(const vector<B>& vec, A initial) const
     {
         return reduce(f, vec, initial);
     }
 
-    A operator()(const vector<B> &vec) const
+    A operator()(const vector<B>& vec) const
     {
         return reduce(f, vec);
     }
@@ -118,3 +118,5 @@ auto reduce(function<A(A, B)> f) -> ReduceFunctor<A, B>
 {
     return ReduceFunctor<A, B>(std::move(f));
 }
+
+#endif

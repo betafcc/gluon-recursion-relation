@@ -1,5 +1,4 @@
 #include <complex>
-#include <iostream>
 #include <vector>
 
 using Number = std::complex<double>;
@@ -120,6 +119,17 @@ Vector operator*(const Vector& b, const Number& a)
     return acc;
 }
 
+Vector conjugate(const Vector& v)
+{
+    Vector result;
+    result.reserve(v.size());
+
+    for (const auto& element : v)
+        result.push_back(std::conj(element));
+
+    return result;
+}
+
 // Inner Product
 Number dot(Vector a, Vector b)
 {
@@ -165,62 +175,58 @@ Number mp2(Vector a)
     return mp(a, a);
 }
 
-// [q | g | k⟩
+// ⟨q | k⟩ - Srednicki Quantum Field Theory page 356
+Number braket(Vector q, Vector k)
+{
+    return dot(conjugate(q), k);
+}
+
+// [q | k] - Srednicki Quantum Field Theory page 356
+Number box(Vector q, Vector k)
+{
+    return dot(q, conjugate(k));
+}
+
+// [q | g | k⟩ - Srednicki Quantum Field Theory page 357
 Number fish(Vector q, Matrix g, Vector k)
 {
     return dot(q, dot(g, k));
 }
 
-// ⟨q | k⟩
-auto braket(Vector q, Vector k) -> Number
+// ⟨q | g | k] - Srednicki Quantum Field Theory page 357
+Number backfish(Vector q, Matrix g, Vector k)
 {
-    throw std::invalid_argument("Not Implemented");
-}
-
-// [q | k]
-auto box(Vector q, Vector k) -> Number
-{
-    throw std::invalid_argument("Not Implemented");
+    return dot(conjugate(q), dot(g, k));
 }
 
 class Process {
     std::vector<Gluon> gluons;
 
 public:
-    Process(std::initializer_list<Gluon> g) :
-        gluons(g) { }
+    Process(std::initializer_list<Gluon> gs) :
+        gluons(gs) { }
 
-    // κ (2.10)
+    Process(std::vector<Gluon> gs) :
+        gluons(gs) { }
+
+    auto current(std::vector<std::size_t> gis)
+    {
+        if (gis.size() == 1)
+            return polarization(gis[0]);
+    }
+
+    // κ (2.10) from berends
     // but with CS conventions (index from 0, excluding end)
     // Add all vectors `gluons[i].vector` for i ∈ [start, end)
     Vector kappa(std::size_t start, std::size_t end) const
     {
-        // TODO improve performance by creating single empty vector of 0s and adding in-place
+        // TODO: improve performance by creating single empty vector of 0s and adding in-place
         Vector acc = gluons[start].momentum;
 
         for (auto i = start; i < end; ++i)
             acc = acc + gluons[i].momentum;
 
         return acc;
-    }
-
-    // Grab momentum of another gluon on the process
-    Vector auxiliar(std::size_t i)
-    {
-        return gluons[(i + 1) % gluons.size()].momentum;
-    }
-
-    Number polarization_component(std::size_t component, std::size_t i)
-    {
-        auto gc = Gamma[component];
-        auto q = auxiliar(i);
-
-        switch (gluons[i].helicity) {
-        case Helicity::Plus:
-            return (1 / sqrt(2)) * (fish(gluons[i].momentum, gc, q) / braket(q, gluons[i].momentum));
-        case Helicity::Minus:
-            return (-1 / sqrt(2)) * (fish(q, gc, gluons[i].momentum) / box(q, gluons[i].momentum));
-        }
     }
 
     // J_ξ(1) -> current_component(ξ, 0)
@@ -239,8 +245,6 @@ public:
         auto indent = "    ";
 
         os << "Process: \n";
-        //  g  λ
-
         // os << indent << "g\tλ  p\u20D7" << '\n';
         os << indent << "g\tλ  p" << '\n';
         for (auto i = 0; i < p.gluons.size(); ++i) {
@@ -255,19 +259,51 @@ public:
         }
         return os;
     }
+
+private:
+    Number current_component(std::vector<std::size_t> gis, std::size_t component)
+    {
+        if (gis.size() == 1)
+            return polarization_component(gis[0], component);
+        // else if (gis.size() == 2) {
+        //     return square_brackets({ 0 }, { 1 }, component) / mp2(gluons[0].momentum + gluons[1].momentum);
+        // }
+    }
+
+    // FIXME: this should be a public Gluon method
+    Vector polarization(std::size_t gi)
+    {
+        Vector acc;
+        acc.reserve(4);
+
+        for (auto j = 0; j < 4; ++j)
+            acc.push_back(polarization_component(gi, j));
+
+        return acc;
+    }
+
+    // (60.7) and (60.8) - Srednicki Quantum Field Theory page 357
+    Number polarization_component(std::size_t gi, std::size_t component)
+    {
+        auto gm = Gamma[component];
+        auto q = auxiliar(gi); // this prevents polarization from being method of Gluon
+        auto k = gluons[gi].momentum;
+
+        switch (gluons[gi].helicity) {
+        case Helicity::Plus: // (60.7)
+            return (-1 / sqrt(2)) * (backfish(q, gm, k) / braket(q, k));
+        case Helicity::Minus: // (60.8)
+            return (-1 / sqrt(2)) * (fish(q, gm, k) / box(q, k));
+        }
+    }
+
+    // Grab momentum of another gluon on the process
+    // FIXME: this should not exist, it's only being used to satisfy "arbitrary massless reference momentum"
+    //   - based on Srednicki Quantum Field Theory page 357
+    //   it could be any non parallel vector, and a simpler one
+    //   eg `is_linear_dependent(vector, {1, 1, 0, 0}) ? {1, 1, 0, 0} : {1, 0, 0, 1}`
+    Vector auxiliar(std::size_t gi)
+    {
+        return gluons[(gi + 1) % gluons.size()].momentum;
+    }
 };
-
-int main()
-{
-    Process process {
-        { Plus, { 1, 2, 3, 4 } },
-        { Minus, { 5, 6, 7, 8 } },
-    };
-
-    // Vector gk(4, Number(0, 1));
-    // std::cout << gk;
-    std::cout << process;
-
-    // std::cout << Number(0, 1) / Number(1, 2);
-    // std::cout << x;
-}
