@@ -257,7 +257,7 @@ public:
 
     // κ (2.10) from berends
     // but with CS conventions (index from 0, excluding end)
-    // Add all vectors `gluons[i].vector` for i ∈ [start, end)
+    // Add all vectors `gluons[i].momentum` for i ∈ [start, end)
     Vector kappa(std::size_t start, std::size_t end) const
     {
         // TODO: improve performance by creating single empty vector of 0s and adding in-place
