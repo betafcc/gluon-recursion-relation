@@ -236,7 +236,7 @@ public:
         return result;
     }
 
-    // variadic version of current. eg current(1, 2, 3)
+    // variadic version of current, eg. `current(0, 1, 2)`
     Vector current(std::size_t gi, ...)
     {
         std::vector<std::size_t> gis;
@@ -275,6 +275,7 @@ public:
     // eg K({1, 4, 3}) != K(1, 3)
     Vector kappa(std::vector<std::size_t> gis) const
     {
+        // TODO: improve performance by creating single empty vector of 0s and adding in-place
         Vector acc = gluons[gis[0]].momentum;
 
         for (auto i = 1; i < gis.size(); ++i)
