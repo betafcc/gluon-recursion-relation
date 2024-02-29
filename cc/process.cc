@@ -215,6 +215,38 @@ Number backfish(Vector q, Matrix g, Vector k)
     return dot(conjugate(q), dot(g, k));
 }
 
+// berends (2.13)
+// {J(1), J(2), J(3)}_ξ
+//    = J(1) . (J(3) J_ξ(2) - J(2) J_ξ(3))
+//    - J(3) . (J(2) J_ξ(1) - J(1) J_ξ(2))
+// {a, b, c}_ξ
+//    = a . (c * b[xi] - b * c[xi])
+//    - c . (b * a[xi] - a * b[xi])
+inline Number curly_brackets(
+    Vector a,
+    Vector b,
+    Vector c,
+    std::size_t xi
+)
+{
+
+    return dot(a, (c * b[xi] - b * c[xi])) - dot(c, (b * a[xi] - a * b[xi]));
+}
+
+inline Vector curly_brackets(
+    Vector a,
+    Vector b,
+    Vector c
+)
+{
+    return {
+        curly_brackets(a, b, c, 0),
+        curly_brackets(a, b, c, 1),
+        curly_brackets(a, b, c, 2),
+        curly_brackets(a, b, c, 3),
+    };
+}
+
 class Process {
     std::vector<Gluon> gluons;
 
