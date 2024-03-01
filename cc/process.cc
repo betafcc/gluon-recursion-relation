@@ -5,18 +5,15 @@ using Number = std::complex<double>;
 using Vector = std::vector<Number>;
 using Matrix = std::vector<Vector>;
 
-enum class Helicity {
-    Plus,
-    Minus
+enum Helicity {
+    Minus = -1,
+    Plus = 1
 };
 
 struct Gluon {
     Helicity helicity;
     Vector momentum;
 };
-
-const Helicity Plus = Helicity::Plus;
-const Helicity Minus = Helicity::Minus;
 
 // Dirac Matrices
 const std::vector<Matrix> Gamma {
@@ -438,7 +435,7 @@ private:
     // FIXME: this should not exist, it's only being used to satisfy "arbitrary massless reference momentum"
     //   - based on Srednicki Quantum Field Theory page 357
     //   it could be any non-parallel vector, and a simpler one
-    //   eg `is_linear_dependent(vector, {1, 1, 0, 0}) ? {1, 1, 0, 0} : {1, 0, 0, 1}`
+    //   eg `is_linear_dependent(vector, {1, 1, 0, 0}) ? {1, 0, 0, 1} : {1, 1, 0, 0}`
     Vector auxiliar(std::size_t gi)
     {
         return gluons[(gi + 1) % gluons.size()].momentum;
