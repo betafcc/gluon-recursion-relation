@@ -50,25 +50,20 @@ const std::vector<Matrix> Gamma {
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const std::complex<T>& c)
 {
-
     if (c.real() == 0 && c.imag() == 0)
-        os << "0";
-    else if (c.real() == 0 && c.imag() == 1)
-        os << "i";
-    else if (c.imag() == 0) {
+        return os << '0';
+    if (c.real() != 0)
         os << c.real();
-    } else if (c.real() == 0) {
-        os << c.imag() << "i";
-    } else {
-        os << c.real();
-        if (c.imag() < 0)
-            os << " - ";
+    if (c.imag() != 0) {
+        if (c.imag() > 0 && c.real() != 0)
+            os << '+';
+        if (c.imag() == 1)
+            os << 'i';
+        else if (c.imag() == -1)
+            os << "-i";
         else
-            os << " + ";
-        os << abs(c.imag());
-        os << "i";
+            os << c.imag() << 'i';
     }
-
     return os;
 }
 
@@ -80,7 +75,7 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& vec)
     for (size_t i = 0; i < vec.size(); ++i) {
         os << vec[i];
         if (i != vec.size() - 1)
-            os << ", ";
+            os << " ";
     }
     os << " ⟩";
     return os;

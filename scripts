@@ -15,13 +15,4 @@ compile() {
     g++ -std=${std} ./cc/${file}.cc -o ./build/${file}
 }
 
-case $1 in
-watch)
-    shift
-    watch $@
-    ;;
-compile)
-    shift
-    compile $@
-    ;;
-esac
+"$@"
