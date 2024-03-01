@@ -226,7 +226,7 @@ public:
             return (1.0 / mp2(gluons[0].momentum + gluons[1].momentum)) * sb({ 0 }, { 1 }, xi);
         else if (gis.size() == 3)
             // berends (2.11)
-            return (1.0 / mp2(kappa(gis))) * (sb({ 1 }, { 2, 3 }, xi) + sb({ 1, 2 }, { 3 }, xi));
+            return (1.0 / mp2(kappa(gis))) * (sb({ 0 }, { 1, 2 }, xi) + sb({ 0, 1 }, { 2 }, xi));
         else
             throw std::runtime_error("Not implemented");
     }
