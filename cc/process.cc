@@ -180,77 +180,39 @@ Vector dot(Vector a, Matrix b)
 }
 
 // Minkowski Inner Product
-inline Number mp(Vector a, Vector b)
+Number mp(Vector a, Vector b)
 {
     return a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3];
 }
 
 // Same as mp(a, a)
-inline Number mp2(Vector a)
+Number mp2(Vector a)
 {
     return mp(a, a);
 }
 
 // ⟨q | k⟩ - Srednicki Quantum Field Theory page 356
-inline Number braket(Vector q, Vector k)
+Number braket(Vector q, Vector k)
 {
     return dot(conjugate(q), k);
 }
 
 // [q | k] - Srednicki Quantum Field Theory page 356
-inline Number box(Vector q, Vector k)
+Number box(Vector q, Vector k)
 {
     return dot(q, conjugate(k));
 }
 
 // [q | g | k⟩ - Srednicki Quantum Field Theory page 357
-inline Number fish(Vector q, Matrix g, Vector k)
+Number fish(Vector q, Matrix g, Vector k)
 {
     return dot(q, dot(g, k));
 }
 
 // ⟨q | g | k] - Srednicki Quantum Field Theory page 357
-inline Number backfish(Vector q, Matrix g, Vector k)
+Number backfish(Vector q, Matrix g, Vector k)
 {
     return dot(conjugate(q), dot(g, k));
-}
-
-/*
-berends (2.13)
-
-{J(1), J(2), J(3)}_ξ
-  = J(1) . (J(3) J_ξ(2) - J(2) J_ξ(3))
-  - J(3) . (J(2) J_ξ(1) - J(1) J_ξ(2))
-
-=>
-
-{a, b, c}[xi]
-  = a . (c * b[xi] - b * c[xi])
-  - c . (b * a[xi] - a * b[xi])
-*/
-inline Number curly_brackets(
-    Vector a,
-    Vector b,
-    Vector c,
-    std::size_t xi
-)
-{
-
-    return dot(a, (c * b[xi] - b * c[xi])) - dot(c, (b * a[xi] - a * b[xi]));
-}
-
-inline Vector curly_brackets(
-    Vector a,
-    Vector b,
-    Vector c
-)
-{
-    return {
-        curly_brackets(a, b, c, 0),
-        curly_brackets(a, b, c, 1),
-        curly_brackets(a, b, c, 2),
-        curly_brackets(a, b, c, 3),
-    };
 }
 
 class Process {
@@ -269,39 +231,52 @@ public:
             return polarization(gis[0], xi);
         else if (gis.size() == 2)
             // berends (2.7)
-            return (1.0 / mp2(gluons[0].momentum + gluons[1].momentum)) * square_brackets({ 0 }, { 1 }, xi);
+            return (1.0 / mp2(gluons[0].momentum + gluons[1].momentum)) * sb({ 0 }, { 1 }, xi);
+        else if (gis.size() == 3)
+            // berends (2.11)
+            return (1.0 / mp2(kappa(gis))) * (sb({ 1 }, { 2, 3 }, xi) + sb({ 1, 2 }, { 3 }, xi));
+        else
+            throw std::runtime_error("Not implemented");
+    }
+
+    Vector current(std::vector<std::size_t> gis)
+    {
+        if (gis.size() == 1)
+            return polarization(gis[0]);
+        else if (gis.size() == 2)
+            return {
+                current(gis, 0),
+                current(gis, 1),
+                current(gis, 2),
+                current(gis, 3),
+            };
+        else if (gis.size() == 3)
+            // berends (2.14)
+            return (1.0 / mp2(kappa(gis))) * (sb({ 0 }, { 1, 2 }) + sb({ 0, 1 }, { 2 }) + cb({ 0 }, { 1 }, { 2 }));
         else {
+            // berends (2.19)
             auto factor = 1.0 / mp2(kappa(gis));
             auto n = gis.size();
 
-            Number sb_acc = 0;
-            for (auto m = 0; m < (n - 1); m++) {
-                std::vector<std::size_t> left(gis.begin() + 0, gis.begin() + m);
-                std::vector<std::size_t> right(gis.begin() + m + 1, gis.begin() + n);
-                sb_acc = sb_acc + square_brackets(left, right, xi);
-            }
+            // FIXME: we can use only one acc
+            auto sb_acc = Vector(4, 0);
+            for (auto m = 0; m < (n - 1); ++m)
+                sb_acc = sb_acc + sb( // clang-format off
+                    std::vector<std::size_t>(gis.begin(), gis.begin() + m + 1),
+                    std::vector<std::size_t>(gis.begin() + m + 1, gis.begin() + n)
+                ); // clang-format on
 
-            Number cb_acc = 0;
-            for (auto m = 0; m < (n - 2); m++)
-                for (auto k = m + 1; k < (n - 1); k++) {
-                    std::vector<std::size_t> left(gis.begin() + 0, gis.begin() + m);
-                    std::vector<std::size_t> center(gis.begin() + m + 1, gis.begin() + k);
-                    std::vector<std::size_t> right(gis.begin() + k + 1, gis.begin() + n);
-                    cb_acc = cb_acc + curly_brackets(current(left), current(center), current(right), xi);
-                }
+            auto cb_acc = Vector(4, 0);
+            for (auto m = 0; m < (n - 2); ++m)
+                for (auto k = m + 1; k < (n - 1); ++k)
+                    cb_acc = cb_acc + cb( // clang-format off
+                        std::vector<std::size_t>(gis.begin(), gis.begin() + m + 1),
+                        std::vector<std::size_t>(gis.begin() + m + 1, gis.begin() + k + 1),
+                        std::vector<std::size_t>(gis.begin() + k + 1, gis.begin() + n)
+                    ); // clang-format on
 
             return factor * (sb_acc + cb_acc);
         }
-    }
-
-    inline Vector current(std::vector<std::size_t> gis)
-    {
-        return {
-            current(gis, 0),
-            current(gis, 1),
-            current(gis, 2),
-            current(gis, 3),
-        };
     }
 
     // κ (2.10) from berends
@@ -321,7 +296,7 @@ public:
     // this version takes a vector of indexes,
     // since it's not clear how kappa should behave when indexes out of order
     // or not continuous
-    // eg K({1, 4, 3}) != K(1, 3)
+    // eg κ({1, 4, 3}) != κ(1, 3)
     Vector kappa(std::vector<std::size_t> gis) const
     {
         // TODO: improve performance by creating single empty vector of 0s and adding in-place
@@ -375,7 +350,7 @@ private:
         - 2 κ(xs) . J(ys) J(xs)[xi]
         + (κ(xs) - κ(ys))[xi] J(xs) . J(ys)
     */
-    Number square_brackets(
+    Number sb(
         std::vector<std::size_t> xs,
         std::vector<std::size_t> ys,
         std::size_t xi
@@ -386,20 +361,59 @@ private:
             + (kappa(xs) - kappa(ys))[xi] * dot(current(xs), current(ys));
     }
 
-    inline Vector square_brackets(
+    Vector sb(
         std::vector<std::size_t> xs,
         std::vector<std::size_t> ys
     )
     {
         return {
-            square_brackets(xs, ys, 0),
-            square_brackets(xs, ys, 1),
-            square_brackets(xs, ys, 2),
-            square_brackets(xs, ys, 3),
+            sb(xs, ys, 0),
+            sb(xs, ys, 1),
+            sb(xs, ys, 2),
+            sb(xs, ys, 3),
         };
     }
 
-    // FIXME: this should be a public Gluon method
+    /*
+    berends (2.13)
+
+    {J(1), J(2), J(3)}_ξ
+      = J(1) . (J(3) J_ξ(2) - J(2) J_ξ(3))
+      - J(3) . (J(2) J_ξ(1) - J(1) J_ξ(2))
+
+    =>
+
+    {J(a), J(b), J(c)}[xi]
+      = J(a) . (J(c) * J(b)[xi] - J(b) * J(c)[xi])
+      - J(c) . (J(b) * J(a)[xi] - J(a) * J(b)[xi])
+    */
+    Number cb(
+        std::vector<std::size_t> a,
+        std::vector<std::size_t> b,
+        std::vector<std::size_t> c,
+        std::size_t xi
+    )
+    {
+
+        return dot(current(a), current(c) * current(b, xi) - current(b) * current(c, xi))
+            - dot(current(c), current(b) * current(a, xi) - current(a) * current(b, xi));
+    }
+
+    Vector cb(
+        std::vector<std::size_t> a,
+        std::vector<std::size_t> b,
+        std::vector<std::size_t> c
+    )
+    {
+        return {
+            cb(a, b, c, 0),
+            cb(a, b, c, 1),
+            cb(a, b, c, 2),
+            cb(a, b, c, 3),
+        };
+    }
+
+    // FIXME: this should be a Gluon method
     // (60.7) and (60.8) - Srednicki Quantum Field Theory page 357
     Number polarization(std::size_t gi, std::size_t xi)
     {
@@ -415,7 +429,7 @@ private:
         }
     }
 
-    inline Vector polarization(std::size_t gi)
+    Vector polarization(std::size_t gi)
     {
         return {
             polarization(gi, 0),

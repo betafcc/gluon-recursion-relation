@@ -91,10 +91,16 @@ int main()
 
     Process process(gluons);
 
+    auto xs = Vector({ 1, 2, 3, 4 });
+
+    std::cout << xs << '\n';
+
+    std::cout << Vector(xs.begin() + 0, xs.begin() + 1) << '\n';
+
     std::cout << process << '\n';
+    std::cout << process.current({ 1, 0 }) << '\n';
     std::cout << process.current({ 0, 1, 2 });
     std::cout << '\n';
-    std::cout << process.current({ 1, 0 });
 
     // TODO:
     // berends (2.5)
@@ -120,5 +126,6 @@ int main()
     //         == 0.0
     // );
 
-    std::cout << "\nDone 💅\n";
+    std::cout
+        << "\nDone 💅\n";
 }
