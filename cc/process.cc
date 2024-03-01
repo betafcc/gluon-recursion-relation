@@ -236,6 +236,8 @@ public:
         if (gis.size() == 1)
             return polarization(gis[0]);
         else if (gis.size() == 2)
+            // TODO: this case is the only with definition dependent on the xi variant,
+            // it can be inlined here and remove the xi variant after sb, cb, kappa are handled
             return {
                 current(gis, 0),
                 current(gis, 1),
@@ -348,6 +350,8 @@ private:
         std::size_t xi
     )
     {
+        // TODO: obvious perfomance improvement by saving terms of this operation
+        // sb_xi can be totally removed in fact
         return dot(2 * kappa(ys), current(xs) * current(ys, xi))
             - dot(2 * kappa(xs), current(ys) * current(xs, xi))
             + (kappa(xs) - kappa(ys))[xi] * dot(current(xs), current(ys));
