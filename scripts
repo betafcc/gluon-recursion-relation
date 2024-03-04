@@ -4,7 +4,7 @@ watch() {
     local file="$1"
     local std="${2:-c++17}"
 
-    ls ./cc/*.cc |
+    ls ./cpp/*.cpp |
         entr -r -s "clear && ./scripts compile ${file} ${std} && echo '\n======\n' && ./build/${file}"
 }
 
@@ -12,7 +12,7 @@ compile() {
     local file="$1"
     local std="${2:-c++17}"
 
-    g++ -std=${std} ./cc/${file}.cc -o ./build/${file}
+    g++ -std=${std} ./cpp/${file}.cpp -o ./build/${file}
 }
 
 "$@"

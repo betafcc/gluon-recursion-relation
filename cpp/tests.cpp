@@ -1,4 +1,4 @@
-#include "process.cc"
+#include "process.cpp"
 #include <iostream>
 #include <random>
 #include <vector>
@@ -56,6 +56,21 @@ public:
     {
         return vector<Number>(4);
     }
+
+    // Vector momentum(energy, mass)
+    // {
+
+    //     double cos_theta = rand_cosine();
+    //     double sin_theta = std::sqrt(1.0 - cos_theta * cos_theta);
+    //     double phi = 2 * M_PI * rand_uniform();
+
+    //     double pmod = std::sqrt(energy * energy - mass * mass);
+    //     double px = pmod * sin_theta * std::cos(phi);
+    //     double py = pmod * sin_theta * std::sin(phi);
+    //     double pz = pmod * cos_theta;
+
+    //     return { energy, px, py, pz };
+    // }
 
     Gluon gluon()
     {
@@ -125,6 +140,18 @@ int main()
     //     dot(gluons[0].momentum + gluons[1].momentum + gluons[2].momentum, process.current(0, 1, 2))
     //         == 0.0
     // );
+
+    // std::cout << Number(0, -1);
+
+    std::cout << Number(0, -1) << " == -i\n";
+    std::cout << Number(0, 1) << " == i\n";
+    std::cout << Number(0, -2) << " == -2i\n";
+    std::cout << Number(0, 2) << " == 2i\n";
+
+    std::cout << Number(0, 0) << " == 0\n";
+    std::cout << Number(1, 0) << " == 1\n";
+    std::cout << Number(-1, 0) << " == -1\n";
+    std::cout << Number(-1, -1) << " == -1-i\n";
 
     std::cout
         << "\nDone 💅\n";
