@@ -98,10 +98,10 @@ void test(const char* message, bool condition)
 int main()
 {
     std::vector<Gluon> gluons = {
-        { Plus, { 1, 2, 3, 4 } },
-        { Minus, { 5, 6, 7, 8 } },
-        { Plus, { 2, 3, 4, 5 } },
-
+        { Plus, { 7, 0.2503853218528432, 0.0516972277498482, -6.995329483823019 } },
+        { Minus, { 17, 1.2068332374603898, 15.309925694446564, -7.290386050648196 } },
+        { Plus, { 11, -4.839116417149157, -5.099873173941427, -8.460156376272847 } },
+        { Plus, { 18, 5.69161547295297, 6.240582197700386, -15.895302675375119 } },
     };
 
     Process process(gluons);
@@ -110,12 +110,10 @@ int main()
 
     std::cout << xs << '\n';
 
-    std::cout << Vector(xs.begin() + 0, xs.begin() + 1) << '\n';
-
     std::cout << process << '\n';
-    std::cout << process.current({ 1, 0 }) << '\n';
-    std::cout << process.current({ 0, 1, 2 });
-    std::cout << '\n';
+    // std::cout << process.current({ 1, 0 }) << '\n';
+    // std::cout << process.current({ 0, 1, 2 });
+    // std::cout << '\n';
 
     // TODO:
     // berends (2.5)
@@ -125,34 +123,23 @@ int main()
     // berends (2.6)
     // J_ξ(1, 2) = -J_ξ(2, 1)
 
-    // test(
-    //     "berends (2.15) -> J(3, 2, 1) = J(1, 2, 3) ",
-    //     process.current(2, 1, 0) == process.current(0, 1, 2)
-    // );
+    std::cout << process.current({ 0, 1, 2 }) + process.current({ 1, 2, 0 }) + process.current({ 2, 0, 1 }) << '\n';
 
-    // test(
-    //     "berends (2.16) -> J(1, 2, 3) + J(2, 3, 1)  + J(3, 1, 2) = 0",
-    //     process.current(0, 1, 2) + process.current(1, 2, 0) == process.current(2, 0, 1)
-    // );
+    test(
+        "berends (2.15) -> J(3, 2, 1) = J(1, 2, 3) ",
+        process.current({ 2, 1, 0 }) == process.current({ 0, 1, 2 })
+    );
 
-    // test(
-    //     "berends (2.17) -> (K₁ + K₂ + K₃) · J(1, 2, 3) = 0",
-    //     dot(gluons[0].momentum + gluons[1].momentum + gluons[2].momentum, process.current(0, 1, 2))
-    //         == 0.0
-    // );
+    test(
+        "berends (2.16) -> J(1, 2, 3) + J(2, 3, 1)  + J(3, 1, 2) = 0",
+        process.current({ 0, 1, 2 }) + process.current({ 1, 2, 0 }) + process.current({ 2, 0, 1 }) == Vector(4, 0)
+    );
 
-    // std::cout << Number(0, -1);
+    test(
+        "berends (2.17) -> (K₁ + K₂ + K₃) · J(1, 2, 3) = 0",
+        dot(gluons[0].momentum + gluons[1].momentum + gluons[2].momentum, process.current({ 0, 1, 2 }))
+            == 0.0
+    );
 
-    std::cout << Number(0, -1) << " == -i\n";
-    std::cout << Number(0, 1) << " == i\n";
-    std::cout << Number(0, -2) << " == -2i\n";
-    std::cout << Number(0, 2) << " == 2i\n";
-
-    std::cout << Number(0, 0) << " == 0\n";
-    std::cout << Number(1, 0) << " == 1\n";
-    std::cout << Number(-1, 0) << " == -1\n";
-    std::cout << Number(-1, -1) << " == -1-i\n";
-
-    std::cout
-        << "\nDone 💅\n";
+    std::cout << "\nDone 💅\n";
 }
