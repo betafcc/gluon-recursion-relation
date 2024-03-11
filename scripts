@@ -2,17 +2,21 @@
 
 watch() {
     local file="$1"
-    local std="${2:-c++17}"
-
     ls ./cpp/*.cpp |
-        entr -r -s "clear && ./scripts compile ${file} ${std} && echo '\n======\n' && ./build/${file}"
+        entr -r -s "clear && ./scripts compile ${file} && echo '\n======\n' && ./build/${file}"
 }
 
 compile() {
     local file="$1"
-    local std="${2:-c++17}"
 
-    g++ -std=${std} ./cpp/${file}.cpp -o ./build/${file}
+    g++ ./cpp/${file}.cpp -o ./build/${file} $(root-config --cflags --libs)
+}
+
+run() {
+    local file="$1"
+
+    ./scripts compile ${file}
+    ./build/${file}
 }
 
 "$@"

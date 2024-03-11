@@ -254,7 +254,7 @@ public:
 
             // FIXME: we can use only one acc
             auto sb_acc = Vector(4, 0);
-            for (auto m = 0; m < (n - 1); ++m)  // TODO: auto m = 1 simplifies
+            for (auto m = 0; m < (n - 1); ++m) // TODO: auto m = 1 simplifies
                 sb_acc = sb_acc + sb( // clang-format off
                     std::vector<std::size_t>(gis.begin(), gis.begin() + m + 1),
                     std::vector<std::size_t>(gis.begin() + m + 1, gis.begin() + n)

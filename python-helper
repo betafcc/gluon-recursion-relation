@@ -1,0 +1,10 @@
+#!/usr/bin/env zsh
+
+old_pwd=$(pwd)
+
+cd /Applications/root_v6.30.04/bin
+source thisroot.sh
+
+cd $old_pwd
+
+/usr/bin/python3 -m JupyROOT.kernel.rootkernel -f ${@}
